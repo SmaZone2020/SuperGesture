@@ -8,7 +8,8 @@ class Gesture(Enum):
     CURSOR_MOVE = auto()   # open palm → move cursor
     DRAG = auto()           # fist → drag
     CLICK = auto()          # OK gesture / thumb-index pinch → left click
-    SCROLL = auto()         # left hand fist → scroll wheel
+    RIGHT_CLICK = auto()    # left hand OK gesture → right click
+    SCROLL = auto()         # left hand fist → scroll wheel + zoom
 
 
 class GestureRecognizer:
@@ -69,9 +70,13 @@ class GestureRecognizer:
             if fingers_up[0] and dist_thumb_index < config.CLICK_THRESHOLD:
                 return Gesture.CLICK, {}
 
-        # --- Secondary hand (scroll) ---
+        # --- Secondary hand (scroll / zoom / right-click) ---
         else:
-            # Fist → scroll
+            # 1. OK Gesture → right click
+            if dist_thumb_index < config.CLICK_THRESHOLD and fingers_up[1] and fingers_up[2] and fingers_up[3]:
+                return Gesture.RIGHT_CLICK, {}
+
+            # 2. Fist → scroll (vertical) + zoom (horizontal)
             if all_four_closed:
                 return Gesture.SCROLL, {'fingertip': (index_tip.x, index_tip.y)}
 

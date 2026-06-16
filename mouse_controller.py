@@ -18,9 +18,11 @@ class MouseController:
         self._prev_fingertip = None
         self._is_dragging = False
 
-        # Scroll state
+        # Scroll / Zoom state
         self._scroll_smoother = EMASmoother(alpha=config.SCROLL_EMA_ALPHA)
         self._prev_scroll_fingertip = None
+        self._last_right_click_time = 0.0
+        self._last_zoom_time = 0.0
 
     # ------------------------------------------------------------------
     # Track-zone helpers
@@ -75,6 +77,9 @@ class MouseController:
 
             elif gesture == Gesture.CLICK:
                 self._do_click(now)
+
+            elif gesture == Gesture.RIGHT_CLICK:
+                self._do_right_click(now)
 
             elif gesture == Gesture.SCROLL:
                 self._do_scroll(extra_data.get('fingertip'))
@@ -167,7 +172,7 @@ class MouseController:
         self._last_action_time = now
 
     # ------------------------------------------------------------------
-    # Scroll (secondary hand fist)
+    # Scroll + Zoom (secondary hand fist)
     # ------------------------------------------------------------------
 
     def _do_scroll(self, fingertip):
@@ -176,14 +181,44 @@ class MouseController:
         x, y = fingertip
 
         if self._prev_scroll_fingertip is not None:
-            _, py = self._prev_scroll_fingertip
+            px, py = self._prev_scroll_fingertip
+            dx = (x - px) * config.CAMERA_WIDTH * config.CURSOR_SENSITIVITY
             dy = (py - y) * config.CAMERA_HEIGHT * config.CURSOR_SENSITIVITY
-            _, sy = self._scroll_smoother.update(0, dy)
+            sx, sy = self._scroll_smoother.update(dx, dy)
+
+            # Vertical → scroll
             scroll_amount = int(sy * config.SCROLL_SENSITIVITY / config.CURSOR_SENSITIVITY)
             if scroll_amount != 0:
                 pyautogui.scroll(scroll_amount, _pause=False)
 
+            # Horizontal → zoom (Ctrl + scroll)
+            now = time.time()
+            if now - self._last_zoom_time >= config.ZOOM_COOLDOWN:
+                zoom_amount = int(sx * config.ZOOM_SENSITIVITY / config.CURSOR_SENSITIVITY)
+                if zoom_amount != 0:
+                    pyautogui.keyDown('ctrl')
+                    pyautogui.scroll(zoom_amount, _pause=False)
+                    pyautogui.keyUp('ctrl')
+                    self._last_zoom_time = now
+
         self._prev_scroll_fingertip = (x, y)
+
+    # ------------------------------------------------------------------
+    # Right click (secondary hand OK)
+    # ------------------------------------------------------------------
+
+    def _do_right_click(self, now):
+        if now - self._last_action_time < config.CLICK_COOLDOWN:
+            return
+
+        if now - self._last_right_click_time < config.DOUBLE_CLICK_WINDOW:
+            pyautogui.rightClick(_pause=False)
+            self._last_right_click_time = 0.0
+        else:
+            pyautogui.rightClick(_pause=False)
+            self._last_right_click_time = now
+
+        self._last_action_time = now
 
     # ------------------------------------------------------------------
     # State reset

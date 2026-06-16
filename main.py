@@ -90,7 +90,9 @@ def main():
     print("    Fist + move        ->  drag")
     print("    OK / pinch         ->  click (double-click if fast)")
     print("  Left hand:")
-    print("    Fist + move up/down ->  scroll wheel")
+    print("    Fist + move up/down   ->  scroll wheel")
+    print("    Fist + move left/right ->  zoom (Ctrl+scroll)")
+    print("    OK gesture            ->  right click")
     print("  Press 'q' to quit.")
     print("  FAILSAFE: fling mouse to top-left corner to emergency-stop.")
 
